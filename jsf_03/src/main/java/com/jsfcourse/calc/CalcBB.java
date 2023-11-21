@@ -1,21 +1,36 @@
 package com.jsfcourse.calc;
 
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import jakarta.enterprise.context.RequestScoped;
+import java.io.Serializable;
+import java.util.ResourceBundle;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.faces.annotation.ManagedProperty;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
+import jakarta.faces.view.ViewScoped;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 @Named
-@RequestScoped
-public class CalcBB {
+@ViewScoped
+public class CalcBB implements Serializable {
     private String kwotaKredytu;
     private String oprocentowanie;
     private String okres;
     private Double miesiecznaRata;
 
-    @Inject
-    FacesContext ctx;
+  // Resource injected
+	@Inject
+	@ManagedProperty("#{txtCalcErr}")
+	private ResourceBundle txtCalcErr;
+
+	// Resource injected
+	@Inject
+	@ManagedProperty("#{txtCalc}")
+	private ResourceBundle txtCalc;
+
+	@Inject
+	FacesContext ctx; 
 
     public String getKwotaKredytu() {
         return kwotaKredytu;
@@ -49,32 +64,31 @@ public class CalcBB {
         this.miesiecznaRata = miesiecznaRata;
     }
 
-    public boolean obliczRaty() {
+    public String obliczRaty() {
         try {
-            double kwota = Double.parseDouble(kwotaKredytu);
+            double kwotaKredytu = Double.parseDouble(this.kwotaKredytu);
             double oprocentowanie = Double.parseDouble(this.oprocentowanie) / 100.0;
             int okres = Integer.parseInt(this.okres);
 
             double q = 1 + oprocentowanie / 12;
-            double rata = kwota * Math.pow(q, okres) * ((q - 1) / (Math.pow(q, okres) - 1));
-            miesiecznaRata = rata;
+            double miesiecznaRata = kwotaKredytu * Math.pow(q, okres) * ((q - 1) / (Math.pow(q, okres) - 1));
+        
+            String result = Double.toString(miesiecznaRata);
 
-            ctx.addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, "Obliczenia wykonane poprawnie", null));
-            return true;
+            ctx.addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, txtCalcErr.getString("calcComputationOkInfo"), null));
+		ctx.addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_WARN, txtCalc.getString("result") + ": " + result, null));
+		return null;
         } catch (Exception e) {
-            ctx.addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Błąd podczas przetwarzania parametrów", null));
-            return false;
+            ctx.addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, txtCalcErr.getString ("calcParamIncorrect"), null));
+            return null;
         }
     }
 
-    public String oblicz() {
-        if (obliczRaty()) {
-            return "showresult";
-        }
-        return null;
-    }
 
     public String informacje() {
         return "info";
     }
 }
+
